@@ -25,7 +25,25 @@ def mdp_value_iteration(mdp: MDP, max_iter: int = 1000, gamma=1.0) -> np.ndarray
     https://en.wikipedia.org/wiki/Markov_decision_process#Value_iteration
     """
     values = np.zeros(mdp.observation_space.n)
-    # BEGIN SOLUTION
+    for iteration in range(max_iter):
+        # Copie de la fonction de valeur actuelle pour la comparer après la mise à jour
+        V_prev = np.copy(values)
+        
+        # Pour chaque état
+        for state in range(mdp.observation_space.n):
+            # On calcule la valeur de chaque action
+            action_values = []
+            for action in range(mdp.action_space.n):
+                next_state, reward, done = mdp.P[state][action]
+                action_value = reward + gamma * V_prev[next_state]  # Formule de Bellman
+                action_values.append(action_value)
+            
+            # Mise à jour de la fonction de valeur de l'état en choisissant l'action qui maximise la valeur
+            values[state] = max(action_values)
+        
+        # Vérification de la convergence : si la différence est suffisamment petite, on arrête
+        if np.allclose(values, V_prev, atol=1e-6):
+            break
     # END SOLUTION
     return values
 
@@ -42,6 +60,27 @@ def grid_world_value_iteration(
     """
     values = np.zeros((4, 4))
     # BEGIN SOLUTION
+    for _ in range(max_iter):
+        delta = 0
+        new_values = np.copy(values)
+        for row in range(env.rows):
+            for col in range(env.cols):
+                state = env.to_state(row, col)
+                if env.is_terminal(state):
+                    continue
+                action_values = []
+                for action in range(env.action_space.n):
+                    q = 0
+                    for prob, next_state, reward in env.get_transition_prob(state, action):
+                        next_row, next_col = env.from_state(next_state)
+                        q += prob * (reward + gamma * values[next_row, next_col])
+                    action_values.append(q)
+                max_value = max(action_values)
+                new_values[row, col] = max_value
+                delta = max(delta, abs(values[row, col] - new_values[row, col]))
+        values = new_values
+        if delta < theta:
+            break
     # END SOLUTION
 
 
@@ -72,3 +111,26 @@ def stochastic_grid_world_value_iteration(
 ) -> np.ndarray:
     values = np.zeros((4, 4))
     # BEGIN SOLUTION
+    for _ in range(max_iter):
+        delta = 0
+        new_values = np.copy(values)
+        for row in range(env.rows):
+            for col in range(env.cols):
+                state = env.to_state(row, col)
+                if env.is_terminal(state):
+                    continue
+                action_values = []
+                for action in range(env.action_space.n):
+                    q = 0
+                    for prob, next_state, reward in env.get_transition_prob(state, action):
+                        next_row, next_col = env.from_state(next_state)
+                        q += prob * (reward + gamma * values[next_row, next_col])
+                    action_values.append(q)
+                max_value = max(action_values)
+                new_values[row, col] = max_value
+                delta = max(delta, abs(values[row, col] - new_values[row, col]))
+        values = new_values
+        if delta < theta:
+            break
+    # END SOLUTION
+    return values

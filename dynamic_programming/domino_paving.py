@@ -18,4 +18,26 @@ def domino_paving(n: int) -> int:
     """
     a = 0
     # BEGIN SOLUTION
+    if n == 0:
+        return 1
+    if n == 1:
+        return 0
+    if n == 2:
+        return 3
+
+    f = [0] * (n + 1)
+    g = [0] * (n + 1)
+
+    f[0] = 1
+    f[1] = 0
+    f[2] = 3
+    g[0] = 0
+    g[1] = 1
+    g[2] = 0
+
+    for i in range(3, n + 1):
+        f[i] = f[i - 2] + 2 * g[i - 1]
+        g[i] = f[i - 1] + g[i - 2]
+
+    return f[n]
     # END SOLUTION
