@@ -60,28 +60,37 @@ def grid_world_value_iteration(
     """
     values = np.zeros((4, 4))
     # BEGIN SOLUTION
-    for _ in range(max_iter):
+    for iteration in range(max_iter):
         delta = 0
-        new_values = np.copy(values)
-        for row in range(env.rows):
-            for col in range(env.cols):
-                state = env.to_state(row, col)
-                if env.is_terminal(state):
-                    continue
+        for row in range(4):
+            for col in range(4):
+                if env.grid[row, col] in {"P", "N", "W"}:
+                    continue  # Ici je skip parce que c'est terminal ou mur
+                old_value = values[row, col]
                 action_values = []
-                for action in range(env.action_space.n):
-                    q = 0
-                    for prob, next_state, reward in env.get_transition_prob(state, action):
-                        next_row, next_col = env.from_state(next_state)
-                        q += prob * (reward + gamma * values[next_row, next_col])
-                    action_values.append(q)
-                max_value = max(action_values)
-                new_values[row, col] = max_value
-                delta = max(delta, abs(values[row, col] - new_values[row, col]))
-        values = new_values
+                for action in range(4):  # 0: Up, 1: Down, 2: Left, 3: Right
+                    next_row, next_col = row, col
+                    if action == 0:  # Up
+                        next_row = max(0, row - 1)
+                    elif action == 1:  # Down
+                        next_row = min(3, row + 1)
+                    elif action == 2:  # Left
+                        next_col = max(0, col - 1)
+                    elif action == 3:  # Right
+                        next_col = min(3, col + 1)
+                    
+                    if env.grid[next_row, next_col] == "W":
+                        next_row, next_col = row, col
+                    
+                    reward = 1 if env.grid[next_row, next_col] == "P" else -1 if env.grid[next_row, next_col] == "N" else 0
+                    action_values.append(reward + gamma * values[next_row, next_col])
+                values[row, col] = max(action_values)
+                delta = max(delta, abs(old_value - values[row, col]))
+        
         if delta < theta:
             break
     # END SOLUTION
+    return values
 
 
 def value_iteration_per_state(env, values, gamma, prev_val, delta):
@@ -113,23 +122,22 @@ def stochastic_grid_world_value_iteration(
     # BEGIN SOLUTION
     for _ in range(max_iter):
         delta = 0
-        new_values = np.copy(values)
-        for row in range(env.rows):
-            for col in range(env.cols):
-                state = env.to_state(row, col)
-                if env.is_terminal(state):
+        for row in range(values.shape[0]):
+            for col in range(values.shape[1]):
+                if env.grid[row, col] in {"P", "N"}:  # Check for terminal states
                     continue
+                env.current_position = (row, col)  # (Faut mettre à jour la position actuelle)
+                old_value = values[row, col]
                 action_values = []
                 for action in range(env.action_space.n):
                     q = 0
-                    for prob, next_state, reward in env.get_transition_prob(state, action):
-                        next_row, next_col = env.from_state(next_state)
-                        q += prob * (reward + gamma * values[next_row, next_col])
+                    next_states = env.get_next_states(action)
+                    for next_state, reward, prob, _, _ in next_states:
+                        next_row, next_col = next_state  # Unpack the tuple directly
+                        q += prob * env.moving_prob[row, col, action] * (reward + gamma * values[next_row, next_col])
                     action_values.append(q)
-                max_value = max(action_values)
-                new_values[row, col] = max_value
-                delta = max(delta, abs(values[row, col] - new_values[row, col]))
-        values = new_values
+                values[row, col] = max(action_values)
+                delta = max(delta, abs(old_value - values[row, col]))
         if delta < theta:
             break
     # END SOLUTION
